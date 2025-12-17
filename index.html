@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kelime Çalışma</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<style>
+body {
+    font-family: -apple-system;
+    background: #f2f2f7;
+    padding: 20px;
+}
+.card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+.word {
+    font-size: 32px;
+    text-align: center;
+    font-weight: bold;
+}
+input, button {
+    width: 100%;
+    padding: 12px;
+    font-size: 18px;
+    margin-top: 10px;
+    border-radius: 10px;
+}
+button {
+    background: #007aff;
+    color: white;
+    border: none;
+}
+.list-item {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+}
+.small {
+    font-size: 14px;
+    color: #666;
+}
+</style>
+</head>
+<body>
+
+<!-- KELİME ÇALIŞMA -->
+<div class="card">
+    <h2>🇬🇧 Kelime Çalışma</h2>
+    <div class="word" id="word">---</div>
+    <input id="answer" placeholder="Türkçesini yaz">
+    <button onclick="check()">Kontrol Et</button>
+    <p id="result"></p>
+</div>
+
+<!-- KELİME EKLE -->
+<div class="card">
+    <h2>➕ Kelime Ekle</h2>
+    <input id="newEn" placeholder="İngilizce">
+    <input id="newTr" placeholder="Türkçe">
+    <button onclick="addWord()">Kaydet</button>
+</div>
+
+<!-- KELİME LİSTESİ -->
+<div class="card">
+    <h2>✏️ Kelimeler</h2>
+    <div id="wordList"></div>
+</div>
+
+<!-- İSTATİSTİK -->
+<div class="card">
+    <h2>📊 En Zor Kelimeler</h2>
+    <div id="stats"></div>
+</div>
+
+<script>
+let words = JSON.parse(localStorage.getItem("words")) || [
+    {en:"apple", tr:"elma", wrong:0},
+    {en:"book", tr:"kitap", wrong:0}
+];
+
+let current = null;
+
+function save() {
+    localStorage.setItem("words", JSON.stringify(words));
+    renderList();
+    renderStats();
+}
+
+// 🔁 Yanlışlara göre ağırlıklı seçim
+function weightedRandom() {
+    let pool = [];
+    words.forEach(w => {
+        let weight = 1 + w.wrong * 2;
+        for (let i = 0; i < weight; i++) pool.push(w);
+    });
+    return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function newWord() {
+    if (words.length === 0) return;
+    current = weightedRandom();
+    document.getElementById("word").innerText = current.en;
+    document.getElementById("answer").value = "";
+    document.getElementById("result").innerText = "";
+}
+
+function check() {
+    let ans = document.getElementById("answer").value.toLowerCase().trim();
+    if (ans === current.tr.toLowerCase()) {
+        document.getElementById("result").innerText = "✅ Doğru";
+    } else {
+        document.getElementById("result").innerText =
+            "❌ Yanlış → " + current.tr;
+        current.wrong++;
+        save();
+    }
+    setTimeout(newWord, 700);
+}
+
+function addWord() {
+    let en = newEn.value.trim();
+    let tr = newTr.value.trim();
+    if (!en || !tr) return;
+    words.push({en, tr, wrong:0});
+    newEn.value = "";
+    newTr.value = "";
+    save();
+    newWord();
+}
+
+// ✏️🗑 Liste
+function renderList() {
+    wordList.innerHTML = "";
+    words.forEach((w, i) => {
+        wordList.innerHTML += `
+        <div class="list-item">
+            <span>${w.en} - ${w.tr}</span>
+            <span>
+                <button onclick="edit(${i})">✏️</button>
+                <button onclick="del(${i})">🗑</button>
+            </span>
+        </div>`;
+    });
+}
+
+function edit(i) {
+    let en = prompt("İngilizce:", words[i].en);
+    let tr = prompt("Türkçe:", words[i].tr);
+    if (en && tr) {
+        words[i].en = en;
+        words[i].tr = tr;
+        save();
+    }
+}
+
+function del(i) {
+    if (confirm("Silinsin mi?")) {
+        words.splice(i,1);
+        save();
+        newWord();
+    }
+}
+
+// 📊 İstatistik
+function renderStats() {
+    stats.innerHTML = "";
+    [...words]
+        .sort((a,b) => b.wrong - a.wrong)
+        .slice(0,5)
+        .forEach(w => {
+            stats.innerHTML +=
+              `<div>${w.en} → ${w.wrong} yanlış</div>`;
+        });
+}
+
+save();
+newWord();
+</script>
+
+</body>
+</html>
